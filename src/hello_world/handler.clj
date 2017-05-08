@@ -30,23 +30,30 @@
             [ring.middleware.json :as middleware]
             [compojure.route :as route]))
 
-; (defn find-cards
-; 	[]
-; 	(re-seq #"\[\[(.*?)\]\]" "I used [[big dog]] and [[little dog]]"))
+(defn find-card
+	[message]
+  (def pattern (re-pattern "(\\[\\[([^\\[\\]]+)\\]\\])"))
+  (def matcher (re-matcher pattern message))
+  (def result (re-find matcher))
+  (if result
+    {:status 200
+      :body {:text (str "You checked: " result "[]")}
+    }
+    {}
+  )
+)
 
 (defn handle-response
-	[from]
-	(println (compare from "slackbot"))
+	[from message]
 	(if (not= (compare from "slackbot") 0)
-	  {:status 200
-	   :body {:text "You just got checked."}
-	   }))
+    (find-card message)
+  )
+)
 
 (defroutes app-routes
   (POST "/" request
-  	(let [from (get-in request[:params :user_name])]
-  		(println from)
-	  	(handle-response from)))
+  	(let [from (get-in request[:params :user_name]) message (get-in request[:params :text])]
+	  	(handle-response from message)))
   (route/resources "/")
   (route/not-found "Not Found"))
 
