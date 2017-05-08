@@ -30,14 +30,30 @@
             [ring.middleware.json :as middleware]
             [compojure.route :as route]))
 
+(require 'clojure.string)
+
+(defn capitalize-words
+  [string]
+  (->> (clojure.string/split (str string) #"\b")
+    (map clojure.string/capitalize)
+    clojure.string/join))
+
+(defn build-link
+  [cardname]
+  ; ideally this would be a more robust API call
+  ; it would make sense to see if the built link 404s or not before returning it
+  (str "http://www.numotgaming.com.rsz.io/cards/images/cards/" (clojure.string/replace (capitalize-words cardname) #" " "%20") ".png?width=200")
+)
+
 (defn find-card
 	[message]
+  ; right now it only matches the first card b/c capture groups confused me too much
   (def pattern (re-pattern "(\\[\\[([^\\[\\]]+)\\]\\])"))
   (def matcher (re-matcher pattern message))
   (def result (re-find matcher))
   (if result
     {:status 200
-      :body {:text (str "You checked: " result "[]")}
+      :body {:text (build-link (last result))} ; primitive way of getting the right capture group since I don't understand regex really
     }
     {}
   )
