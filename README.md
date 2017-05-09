@@ -13,6 +13,11 @@ You will need [Leiningen][] 2.0.0 or above installed.
 To start a web server for the application, run:
 
     lein ring server
+
+To run via Docker:
+
+	docker build -t oheller/leasechecker .
+	docker run --rm -p 3000:3000 oheller/leasechecker
     
 ## Known Issues
 
