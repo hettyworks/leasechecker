@@ -1,9 +1,10 @@
 (ns hetty.leasechecker.core
-  (:require [slack-rtm.core :as slack]
-            [clojure.string :as str]
+  (:require [clojure.core.async :as a]
             [clojure.data.json :as json]
-            [clojure.core.async :as a]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [envoy.core :as env :refer [defenv env]]
+            [slack-rtm.core :as slack]))
 
 
 ;;(def rtm-conn (slack/connect ""))
@@ -55,12 +56,21 @@
                                                           (last result)
                                                           card-db))))))
 
+(defenv :slack-api-token
+  "Slack RTM API token"
+  :type :string
+  :missing :abort)
+
 (defn start
   []
-  (let [rtm-conn (slack/connect "")
+  (let [rtm-conn (slack/connect (:slack-api-token env))
         events (:events-publication rtm-conn)
         card-db (load-cards)
         c (slack/sub-to-event events :message (process-msg rtm-conn card-db))]
     (loop []
       (a/<!! c)
       (recur))))
+
+(defn -main
+  [& args]
+  (start))
