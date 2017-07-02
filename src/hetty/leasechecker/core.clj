@@ -41,9 +41,10 @@
 
 (defn write-to-channel
   [dispatcher channel msg]
-  (slack/send-event dispatcher {:type "message"
-                                :channel channel
-                                :text msg}))
+  (future
+    (slack/send-event dispatcher {:type "message"
+                                  :channel channel
+                                  :text msg})))
 
 (defn process-msg
   [rtm-conn card-db]
@@ -57,7 +58,8 @@
          (log/info "Found possible card:" result)
          (write-to-channel (:dispatcher rtm-conn) channel (build-link-2
                                                            (last result)
-                                                           card-db))))
+                                                           card-db))
+         (log/info "Finished process-msg")))
      (catch Exception e
        (log/error e "Failed to process")))))
 
