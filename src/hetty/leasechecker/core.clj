@@ -47,7 +47,7 @@
                                   :text msg})))
 
 (defn process-msg
-  [rtm-conn card-db]
+  [dispatcher card-db]
   (fn [{:keys [text channel] :as data}]
     (log/info "process-msg:" data)
     (try
@@ -57,9 +57,9 @@
            result (re-find matcher)]
        (when result
          (log/info "Found possible card:" result)
-         (write-to-channel (:dispatcher rtm-conn) channel (build-link-2
-                                                           (last result)
-                                                           card-db))
+         (write-to-channel dispatcher channel (build-link-2
+                                               (last result)
+                                               card-db))
          (log/info "Finished process-msg")))
      (catch Exception e
        (log/error e "Failed to process")))))
@@ -71,14 +71,15 @@
 
 (defn start
   []
-  (let [rtm-conn (slack/connect
-                  (:slack-api-token env)
-                  :on-close (fn [{:keys [status reason]}]
-                              (log/error "Received :on-close" status reason)))
-        events (:events-publication rtm-conn)
+  (let [{:keys [events-publication dispatcher start]}
+        (slack/connect
+         (:slack-api-token env)
+         :on-close (fn [{:keys [status reason]}]
+                     (log/error "Received :on-close" status reason)))
         card-db (load-cards)
-        c (slack/sub-to-event events :message (process-msg rtm-conn card-db))]
-    (log/info "Connection established, starting main receive loop")
+        c (slack/sub-to-event events-publication
+                              :message (process-msg dispatcher card-db))]
+    (log/info "Connection established: " start)
     (loop []
       (a/<!! c)
       (recur))))
