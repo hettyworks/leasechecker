@@ -54,6 +54,7 @@
            matcher (re-matcher pattern text)
            result (re-find matcher)]
        (when result
+         (log/info "Found possible card:" result)
          (write-to-channel (:dispatcher rtm-conn) channel (build-link-2
                                                            (last result)
                                                            card-db))))
@@ -67,10 +68,14 @@
 
 (defn start
   []
-  (let [rtm-conn (slack/connect (:slack-api-token env))
+  (let [rtm-conn (slack/connect
+                  (:slack-api-token env)
+                  :on-close (fn [{:keys [status reason]}]
+                              (log/error "Received :on-close" status reason)))
         events (:events-publication rtm-conn)
         card-db (load-cards)
         c (slack/sub-to-event events :message (process-msg rtm-conn card-db))]
+    (log/info "Connection established, starting main receive loop")
     (loop []
       (a/<!! c)
       (recur))))
