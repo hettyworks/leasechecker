@@ -49,6 +49,7 @@
 (defn process-msg
   [rtm-conn card-db]
   (fn [{:keys [text channel] :as data}]
+    (log/info "process-msg:" data)
     (try
      ;; right now it only matches the first card b/c capture groups confused me too much
      (let [pattern (re-pattern "(\\[\\[([^\\[\\]]+)\\]\\])")
