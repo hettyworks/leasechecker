@@ -2,6 +2,7 @@
   (:require [clojure.core.async :as a]
             [clojure.data.json :as json]
             [clojure.java.io :as io]
+            [taoensso.timbre :as log]
             [clojure.string :as str]
             [envoy.core :as env :refer [defenv env]]
             [slack-rtm.core :as slack]))
@@ -47,14 +48,17 @@
 (defn process-msg
   [rtm-conn card-db]
   (fn [{:keys [text channel] :as data}]
-    ;; right now it only matches the first card b/c capture groups confused me too much
-    (let [pattern (re-pattern "(\\[\\[([^\\[\\]]+)\\]\\])")
-          matcher (re-matcher pattern text)
-          result (re-find matcher)]
-      (when result
-        (write-to-channel (:dispatcher rtm-conn) channel (build-link-2
-                                                          (last result)
-                                                          card-db))))))
+    (try
+     ;; right now it only matches the first card b/c capture groups confused me too much
+     (let [pattern (re-pattern "(\\[\\[([^\\[\\]]+)\\]\\])")
+           matcher (re-matcher pattern text)
+           result (re-find matcher)]
+       (when result
+         (write-to-channel (:dispatcher rtm-conn) channel (build-link-2
+                                                           (last result)
+                                                           card-db))))
+     (catch Exception e
+       (log/error e "Failed to process")))))
 
 (defenv :slack-api-token
   "Slack RTM API token"

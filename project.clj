@@ -4,6 +4,7 @@
   :resource-paths ["resources"]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
+                 [com.taoensso/timbre "4.10.0"]
                  [slack-rtm "0.1.6"]
                  [amperity/envoy "0.3.1"]
                  [org.clojure/core.async "0.3.443"]]
