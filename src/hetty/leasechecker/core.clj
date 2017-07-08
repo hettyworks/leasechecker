@@ -47,7 +47,7 @@
                                   :text msg})))
 
 (defn process-msg
-  [dispatcher card-db]
+  [dispatcher* card-db]
   (fn [{:keys [text channel] :as data}]
     (log/info "process-msg:" data)
     (try
@@ -57,7 +57,7 @@
            result (re-find matcher)]
        (when result
          (log/info "Found possible card:" result)
-         (write-to-channel dispatcher channel (build-link-2
+         (write-to-channel @dispatcher* channel (build-link-2
                                                (last result)
                                                card-db))
          (log/info "Finished process-msg")))
@@ -71,17 +71,19 @@
 
 (defn start
   []
-  (let [{:keys [events-publication dispatcher start]}
+  (let [card-db (load-cards)
+        dispatcher* (atom nil)
+        {:keys [events-publication dispatcher start]}
         (slack/connect
          (:slack-api-token env)
          :on-close (fn [{:keys [status reason]}]
-                     (log/error "Received :on-close" status reason)))
-        card-db (load-cards)
-        c (slack/sub-to-event events-publication
-                              :message (process-msg dispatcher card-db))]
+                     (log/error "Received :on-close" status reason))
+         :message (process-msg dispatcher* card-db))]
+    (reset! dispatcher* dispatcher)
     (log/info "Connection established: " start)
     (loop []
-      (a/<!! c)
+      ;; todo recover failed connections
+      (Thread/sleep 100000)
       (recur))))
 
 (defn -main
