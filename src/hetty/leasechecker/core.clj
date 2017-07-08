@@ -100,8 +100,9 @@
        (when result
          (log/info "Found possible card:" result)
          (write-to-channel @dispatcher* channel (build-link-3
-                                               (last result)
-                                               card-db))
+                                                 (last result)
+                                                 card-db
+                                                 word-map))
          (log/info "Finished process-msg")))
      (catch Exception e
        (log/error e "Failed to process")))))
@@ -121,7 +122,7 @@
          (:slack-api-token env)
          :on-close (fn [{:keys [status reason]}]
                      (log/error "Received :on-close" status reason))
-         :message (process-msg dispatcher* card-db))]
+         :message (process-msg dispatcher* card-db word-map))]
     (reset! dispatcher* dispatcher)
     (log/info "Connection established: " start)
     (loop []
