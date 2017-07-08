@@ -23,6 +23,34 @@
               [(str/lower-case Name) ImageUrl]))
        (into {})))
 
+(defn cleanse
+  [word]
+  (str/replace word "," ""))
+
+(defn word-card-map
+  [cards]
+  (->> (mapcat (fn [[card-name data]]
+             (loop [parts (str/split card-name #" ")
+                    prev nil
+                    result []]
+               (if (zero? (count parts))
+                 result
+                 (let [curr-word (cleanse (first parts))
+                       full-word (->> (filter (comp not nil?) [prev curr-word])
+                                      (str/join " "))
+                       result (conj result
+                                    [curr-word data])
+                       ;; we don't want the full words
+                       ;; and we don't want the first word twice
+                       result (if (and (not (nil? prev))
+                                       (not (empty? (rest parts))))
+                                (conj result [full-word data])
+                                result)]
+                   (recur (rest parts) full-word result))))) cards)
+       (group-by first)
+       (map (fn [[word data]] [word (map second data)]))
+       (into {})))
+
 (defn build-link
   [card-name]
   ; ideally this would be a more robust API call
@@ -39,6 +67,20 @@
   ;; it would make sense to see if the built link 404s or not before returning it
   (get card-db (str/lower-case card-name)))
 
+(defn get-words
+  [word-map words]
+  (when-let [result (get word-map words)]
+    (rand-nth result)))
+
+(defn build-link-3
+  [card-name card-db word-map]
+  ;; ideally this would be a more robust API call
+  ;; it would make sense to see if the built link 404s or not before returning it
+  (let [lower-name (str/lower-case card-name)]
+   (if-let [data (get card-db lower-name)]
+     data
+     (get-words word-map lower-name))))
+
 (defn write-to-channel
   [dispatcher channel msg]
   (future
@@ -47,7 +89,7 @@
                                   :text msg})))
 
 (defn process-msg
-  [dispatcher* card-db]
+  [dispatcher* card-db word-map]
   (fn [{:keys [text channel] :as data}]
     (log/info "process-msg:" data)
     (try
@@ -57,7 +99,7 @@
            result (re-find matcher)]
        (when result
          (log/info "Found possible card:" result)
-         (write-to-channel @dispatcher* channel (build-link-2
+         (write-to-channel @dispatcher* channel (build-link-3
                                                (last result)
                                                card-db))
          (log/info "Finished process-msg")))
@@ -72,6 +114,7 @@
 (defn start
   []
   (let [card-db (load-cards)
+        word-map (word-card-map card-db)
         dispatcher* (atom nil)
         {:keys [events-publication dispatcher start]}
         (slack/connect
