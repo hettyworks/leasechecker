@@ -7,9 +7,6 @@
             [envoy.core :as env :refer [defenv env]]
             [slack-rtm.core :as slack]))
 
-
-;;(def rtm-conn (slack/connect ""))
-
 (defn capitalize-words
   [string]
   (->> (clojure.string/split (str string) #"\b")
@@ -29,24 +26,25 @@
 
 (defn word-card-map
   [cards]
-  (->> (mapcat (fn [[card-name data]]
-             (loop [parts (str/split card-name #" ")
-                    prev nil
-                    result []]
-               (if (zero? (count parts))
-                 result
-                 (let [curr-word (cleanse (first parts))
-                       full-word (->> (filter (comp not nil?) [prev curr-word])
-                                      (str/join " "))
-                       result (conj result
-                                    [curr-word data])
-                       ;; we don't want the full words
-                       ;; and we don't want the first word twice
-                       result (if (and (not (nil? prev))
-                                       (not (empty? (rest parts))))
-                                (conj result [full-word data])
-                                result)]
-                   (recur (rest parts) full-word result))))) cards)
+  (->> (mapcat
+        (fn [[card-name data]]
+          (loop [parts (str/split card-name #" ")
+                 prev nil
+                 result []]
+            (if (zero? (count parts))
+              result
+              (let [curr-word (cleanse (first parts))
+                    full-word (->> (filter (comp not nil?) [prev curr-word])
+                                   (str/join " "))
+                    result (conj result
+                                 [curr-word data])
+                    ;; we don't want the full words
+                    ;; and we don't want the first word twice
+                    result (if (and (not (nil? prev))
+                                    (not (empty? (rest parts))))
+                             (conj result [full-word data])
+                             result)]
+                (recur (rest parts) full-word result))))) cards)
        (group-by first)
        (map (fn [[word data]] [word (map second data)]))
        (into {})))
@@ -63,8 +61,6 @@
 
 (defn build-link-2
   [card-name card-db]
-  ;; ideally this would be a more robust API call
-  ;; it would make sense to see if the built link 404s or not before returning it
   (get card-db (str/lower-case card-name)))
 
 (defn get-words
@@ -74,8 +70,6 @@
 
 (defn build-link-3
   [card-name card-db word-map]
-  ;; ideally this would be a more robust API call
-  ;; it would make sense to see if the built link 404s or not before returning it
   (let [lower-name (str/lower-case card-name)]
    (if-let [data (get card-db lower-name)]
      data
@@ -93,7 +87,8 @@
   (fn [{:keys [text channel] :as data}]
     (log/info "process-msg:" data)
     (try
-     ;; right now it only matches the first card b/c capture groups confused me too much
+      ;; right now it only matches the first card b/c capture groups confused me
+      ;; too much
      (let [pattern (re-pattern "(\\[\\[([^\\[\\]]+)\\]\\])")
            matcher (re-matcher pattern text)
            result (re-find matcher)]
